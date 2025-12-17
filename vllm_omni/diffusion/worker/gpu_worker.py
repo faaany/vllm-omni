@@ -2,20 +2,26 @@
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 import multiprocessing as mp
 import os
+import time
 
 import torch
 import zmq
-from vllm.config import VllmConfig, set_current_vllm_config
+from vllm.config import LoadConfig, VllmConfig, set_current_vllm_config
 from vllm.distributed.device_communicators.shm_broadcast import MessageQueue
 from vllm.distributed.parallel_state import (
     init_distributed_environment,
     initialize_model_parallel,
 )
 from vllm.logger import init_logger
-from vllm.model_executor.model_loader.utils import set_default_torch_dtype
+from vllm.utils import DeviceMemoryProfiler, GiB_bytes
 
-from vllm_omni.diffusion.data import DiffusionOutput, OmniDiffusionConfig
-from vllm_omni.diffusion.registry import initialize_model
+from vllm_omni.diffusion.cache.selector import get_cache_backend
+from vllm_omni.diffusion.data import (
+    SHUTDOWN_MESSAGE,
+    DiffusionOutput,
+    OmniDiffusionConfig,
+)
+from vllm_omni.diffusion.model_loader.diffusers_loader import DiffusersPipelineLoader
 from vllm_omni.diffusion.request import OmniDiffusionRequest
 from vllm_omni.utils.platform_utils import detect_device_type
 
@@ -69,14 +75,30 @@ class GPUWorker:
 
         init_distributed_environment(world_size=world_size, rank=rank)
         initialize_model_parallel(tensor_model_parallel_size=world_size)
+        logger.info(f"Worker {self.rank}: Initialized device and distributed environment.")
 
-        with device:
-            with set_default_torch_dtype(self.od_config.dtype):
-                self.pipeline = initialize_model(self.od_config)
-                self.pipeline.load_weights()
-                self.pipeline.eval()
-        logger.info(f"Worker {self.rank}: Initialized device, model, and distributed environment.")
+        load_config = LoadConfig()
+        model_loader = DiffusersPipelineLoader(load_config)
+        time_before_load = time.perf_counter()
+        with DeviceMemoryProfiler() as m:
+            self.pipeline = model_loader.load_model(
+                od_config=self.od_config,
+                load_device=f"cuda:{rank}",
+            )
+        time_after_load = time.perf_counter()
+
+        logger.info(
+            "Model loading took %.4f GiB and %.6f seconds",
+            m.consumed_memory / GiB_bytes,
+            time_after_load - time_before_load,
+        )
         logger.info(f"Worker {self.rank}: Model loaded successfully.")
+
+        # Setup cache backend based on type (both backends use enable()/reset() interface)
+        self.cache_backend = get_cache_backend(self.od_config.cache_backend, self.od_config.cache_config)
+
+        if self.cache_backend is not None:
+            self.cache_backend.enable(self.pipeline)
 
     @torch.inference_mode()
     def execute_model(self, reqs: list[OmniDiffusionRequest], od_config: OmniDiffusionConfig) -> DiffusionOutput:
@@ -86,8 +108,21 @@ class GPUWorker:
         assert self.pipeline is not None
         # TODO: dealing with first req for now
         req = reqs[0]
+
+        # Refresh cache context if needed
+        if self.cache_backend is not None and self.cache_backend.is_enabled():
+            self.cache_backend.refresh(self.pipeline, req.num_inference_steps)
+
         output = self.pipeline.forward(req)
         return output
+
+    def shutdown(self) -> None:
+        if torch.distributed.is_initialized():
+            try:
+                torch.distributed.destroy_process_group()
+                logger.info("Worker %s: Destroyed process group", self.rank)
+            except Exception as exc:  # pragma: no cover - best effort cleanup
+                logger.warning("Worker %s: Failed to destroy process group: %s", self.rank, exc)
 
 
 class WorkerProc:
@@ -160,6 +195,14 @@ class WorkerProc:
                 )
                 continue
 
+            if reqs == SHUTDOWN_MESSAGE:
+                logger.info("Worker %s: Received shutdown message", self.gpu_id)
+                self._running = False
+                continue
+            if reqs is None:
+                logger.warning("Worker %s: Received empty payload, ignoring", self.gpu_id)
+                continue
+
             # 2: execute, make sure a reply is always sent
             try:
                 output = self.worker.execute_model(reqs, self.od_config)
@@ -178,6 +221,10 @@ class WorkerProc:
                 continue
 
         logger.info("event loop terminated.")
+        try:
+            self.worker.shutdown()
+        except Exception as exc:  # pragma: no cover - best effort cleanup
+            logger.warning("Worker %s: Shutdown encountered an error: %s", self.gpu_id, exc)
         # if self.result_sender is not None:
         #     self.result_sender.close()
         self.context.term()

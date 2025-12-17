@@ -5,7 +5,7 @@ import signal
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Optional
+from typing import Any
 
 import gradio as gr
 import numpy as np
@@ -94,7 +94,56 @@ def parse_args():
         default=None,
         help="Path to custom stage configs YAML file (optional).",
     )
+    parser.add_argument(
+        "--log-stats",
+        action="store_true",
+        help="Enable statistics logging for AsyncOmni.",
+    )
+    parser.add_argument(
+        "--log-file",
+        type=str,
+        default=None,
+        help="Path prefix for AsyncOmni log files.",
+    )
+    parser.add_argument(
+        "--init-sleep-seconds",
+        type=int,
+        default=30,
+        help="Seconds to sleep between starting stage processes.",
+    )
+    parser.add_argument(
+        "--shm-threshold-bytes",
+        type=int,
+        default=65536,
+        help="Threshold in bytes for using shared memory IPC.",
+    )
+    parser.add_argument(
+        "--batch-timeout",
+        type=int,
+        default=10,
+        help="Batching timeout (seconds) inside each stage.",
+    )
+    parser.add_argument(
+        "--init-timeout",
+        type=int,
+        default=ASYNC_INIT_TIMEOUT,
+        help="Timeout (seconds) for initializing all stages.",
+    )
     return parser.parse_args()
+
+
+def build_async_omni_cli_args(base_args: argparse.Namespace) -> argparse.Namespace:
+    """Construct the minimal CLI args Namespace expected by AsyncOmni."""
+    return argparse.Namespace(
+        model=base_args.model,
+        stage_configs_path=getattr(base_args, "stage_configs_path", None),
+        log_stats=bool(getattr(base_args, "log_stats", False)),
+        log_file=getattr(base_args, "log_file", None),
+        init_sleep_seconds=int(getattr(base_args, "init_sleep_seconds", 30)),
+        shm_threshold_bytes=int(getattr(base_args, "shm_threshold_bytes", 65536)),
+        batch_timeout=int(getattr(base_args, "batch_timeout", 10)),
+        init_timeout=int(getattr(base_args, "init_timeout", ASYNC_INIT_TIMEOUT)),
+    )
 
 
 def build_sampling_params(seed: int, model_key: str) -> list[SamplingParams]:
@@ -129,16 +178,16 @@ def create_prompt_args(base_args: argparse.Namespace) -> SimpleNamespace:
 
 
 def process_audio_file(
-    audio_file: Optional[Any],
-) -> Optional[tuple[np.ndarray, int]]:
+    audio_file: Any | None,
+) -> tuple[np.ndarray, int] | None:
     """Normalize Gradio audio input to (np.ndarray, sample_rate)."""
     if audio_file is None:
         return None
 
-    sample_rate: Optional[int] = None
-    audio_np: Optional[np.ndarray] = None
+    sample_rate: int | None = None
+    audio_np: np.ndarray | None = None
 
-    def _load_from_path(path_str: str) -> Optional[tuple[np.ndarray, int]]:
+    def _load_from_path(path_str: str) -> tuple[np.ndarray, int] | None:
         if not path_str:
             return None
         path = Path(path_str)
@@ -191,7 +240,7 @@ def process_audio_file(
     return audio_np.astype(np.float32), sample_rate
 
 
-def process_image_file(image_file: Optional[Image.Image]) -> Optional[Image.Image]:
+def process_image_file(image_file: Image.Image | None) -> Image.Image | None:
     """Process image file from Gradio input.
 
     Returns:
@@ -206,10 +255,10 @@ def process_image_file(image_file: Optional[Image.Image]) -> Optional[Image.Imag
 
 
 def process_video_file(
-    video_file: Optional[str],
+    video_file: str | None,
     enable_audio_in_video: bool = False,
     max_frames: int = 32,
-) -> Optional[tuple[np.ndarray, dict[str, Any], Optional[tuple[np.ndarray, int]]]]:
+) -> tuple[np.ndarray, dict[str, Any], tuple[np.ndarray, int] | None] | None:
     """Process video file and optionally extract audio track."""
     if video_file is None:
         return None
@@ -226,7 +275,7 @@ def process_video_file(
         print(f"Failed to decode video {video_path}: {exc}")
         return None
 
-    audio_tuple: Optional[tuple[np.ndarray, int]] = None
+    audio_tuple: tuple[np.ndarray, int] | None = None
     if enable_audio_in_video:
         try:
             import librosa  # type: ignore import
@@ -244,9 +293,9 @@ async def run_inference_async_omni(
     sampling_params: list[SamplingParams],
     prompt_args_template: SimpleNamespace,
     user_prompt: str,
-    audio_file: Optional[tuple[str, tuple[int, np.ndarray]]] = None,
-    image_file: Optional[Image.Image] = None,
-    video_file: Optional[str] = None,
+    audio_file: tuple[str, tuple[int, np.ndarray]] | None = None,
+    image_file: Image.Image | None = None,
+    video_file: str | None = None,
     use_audio_in_video: bool = False,
 ):
     """Run inference using AsyncOmni directly with multimodal support."""
@@ -377,9 +426,9 @@ def build_interface(
 
     async def run_inference(
         user_prompt: str,
-        audio_file: Optional[tuple[str, tuple[int, np.ndarray]]],
-        image_file: Optional[Image.Image],
-        video_file: Optional[str],
+        audio_file: tuple[str, tuple[int, np.ndarray]] | None,
+        image_file: Image.Image | None,
+        video_file: str | None,
         use_audio_in_video: bool,
     ):
         return await run_inference_async_omni(
@@ -506,11 +555,8 @@ def main():
         print(f"Using custom stage configs: {args.stage_configs_path}")
 
     sampling_params = build_sampling_params(SEED, model_name)
-    omni = AsyncOmni(
-        model=args.model,
-        stage_configs_path=args.stage_configs_path,
-        init_timeout=ASYNC_INIT_TIMEOUT,
-    )
+    cli_args = build_async_omni_cli_args(args)
+    omni = AsyncOmni(model=args.model, cli_args=cli_args)
     print("✓ AsyncOmni initialized successfully")
     prompt_args_template = create_prompt_args(args)
 

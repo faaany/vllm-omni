@@ -12,6 +12,7 @@ Main entry points for vLLM-Omni inference and serving.
 - [vllm_omni.entrypoints.cli.serve.OmniServeCommand][]
 - [vllm_omni.entrypoints.log_utils.OrchestratorMetrics][]
 - [vllm_omni.entrypoints.omni.Omni][]
+- [vllm_omni.entrypoints.omni_diffusion.OmniDiffusion][]
 - [vllm_omni.entrypoints.omni_llm.OmniLLM][]
 - [vllm_omni.entrypoints.omni_llm.OmniStageLLM][]
 - [vllm_omni.entrypoints.omni_stage.OmniStage][]
@@ -48,11 +49,9 @@ Engine classes for offline and online inference.
 
 Core scheduling and caching components.
 
-- [vllm_omni.core.dit_cache_manager.DiTCacheManager][]
-- [vllm_omni.core.sched.diffusion_scheduler.DiffusionScheduler][]
-- [vllm_omni.core.sched.generation_scheduler.GenerationScheduler][]
+- [vllm_omni.core.sched.omni_ar_scheduler.OmniARScheduler][]
+- [vllm_omni.core.sched.omni_generation_scheduler.OmniGenerationScheduler][]
 - [vllm_omni.core.sched.output.OmniNewRequestData][]
-- [vllm_omni.core.sched.scheduler.OmniScheduler][]
 
 ## Model Executor
 
@@ -97,6 +96,9 @@ Model execution components.
 Configuration classes.
 
 - [vllm_omni.config.model.OmniModelConfig][]
+- [vllm_omni.diffusion.cache.teacache.config.TeaCacheConfig][]
+- [vllm_omni.distributed.omni_connectors.utils.config.ConnectorSpec][]
+- [vllm_omni.distributed.omni_connectors.utils.config.OmniTransferConfig][]
 
 ## Workers
 
@@ -108,13 +110,11 @@ Worker classes and model runners for distributed inference.
 - [vllm_omni.diffusion.worker.npu.npu_worker.NPUWorkerProc][]
 - [vllm_omni.worker.gpu_ar_model_runner.GPUARModelRunner][]
 - [vllm_omni.worker.gpu_ar_worker.GPUARWorker][]
-- [vllm_omni.worker.gpu_diffusion_model_runner.GPUDiffusionModelRunner][]
-- [vllm_omni.worker.gpu_diffusion_worker.GPUDiffusionWorker][]
 - [vllm_omni.worker.gpu_generation_model_runner.GPUGenerationModelRunner][]
 - [vllm_omni.worker.gpu_generation_worker.GPUGenerationWorker][]
 - [vllm_omni.worker.gpu_model_runner.OmniGPUModelRunner][]
 - [vllm_omni.worker.npu.npu_ar_model_runner.NPUARModelRunner][]
 - [vllm_omni.worker.npu.npu_ar_worker.NPUARWorker][]
-- [vllm_omni.worker.npu.npu_diffusion_model_runner.NPUDiffusionModelRunner][]
-- [vllm_omni.worker.npu.npu_diffusion_worker.NPUDiffusionWorker][]
+- [vllm_omni.worker.npu.npu_generation_model_runner.NPUGenerationModelRunner][]
+- [vllm_omni.worker.npu.npu_generation_worker.NPUGenerationWorker][]
 - [vllm_omni.worker.npu.npu_model_runner.OmniNPUModelRunner][]

@@ -1,4 +1,4 @@
-# Online serving Example of vLLM-Omni for Qwen3-omni
+# Qwen3-Omni
 
 Source <https://github.com/vllm-project/vllm-omni/tree/main/examples/online_serving/qwen3_omni>.
 
@@ -113,6 +113,10 @@ The gradio script supports the following arguments:
 ??? abstract "openai_chat_completion_client_for_multimodal_generation.py"
     ``````py
     --8<-- "examples/online_serving/qwen3_omni/openai_chat_completion_client_for_multimodal_generation.py"
+    ``````
+??? abstract "qwen3_omni_moe_thinking.yaml"
+    ``````yaml
+    --8<-- "examples/online_serving/qwen3_omni/qwen3_omni_moe_thinking.yaml"
     ``````
 ??? abstract "run_curl_multimodal_generation.sh"
     ``````sh

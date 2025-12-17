@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from transformers.models.qwen3_omni_moe.configuration_qwen3_omni_moe import Qwen3OmniMoeTextConfig
 from vllm.engine.arg_utils import EngineArgs
@@ -30,8 +29,8 @@ class OmniEngineArgs(EngineArgs):
     stage_id: int = 0
     model_stage: str = "thinker"
     model_arch: str = "Qwen2_5OmniForConditionalGeneration"
-    engine_output_type: Optional[str] = None
-    hf_config_name: Optional[str] = None
+    engine_output_type: str | None = None
+    hf_config_name: str | None = None
 
     def draw_hf_text_config(self, config_dict: dict) -> Qwen3OmniMoeTextConfig:
         # transformers' get_text_config method is used to get the text config from thinker_config.
@@ -51,6 +50,11 @@ class OmniEngineArgs(EngineArgs):
         # Create OmniModelConfig by copying all base config attributes
         # and adding the new omni-specific fields
         config_dict = base_config.__dict__.copy()
+        # FIXME(Isotr0py): This is a temporary workaround for multimodal_config
+        config_dict = {
+            **(getattr(mm := config_dict.pop("multimodal_config", None), "__dict__", mm or {})),
+            **config_dict,
+        }
 
         # Add the new omni-specific fields
         config_dict["stage_id"] = self.stage_id
@@ -86,8 +90,8 @@ class AsyncOmniEngineArgs(AsyncEngineArgs):
     stage_id: int = 0
     model_stage: str = "thinker"
     model_arch: str = "Qwen2_5OmniForConditionalGeneration"
-    engine_output_type: Optional[str] = None
-    hf_config_name: Optional[str] = None
+    engine_output_type: str | None = None
+    hf_config_name: str | None = None
 
     def draw_hf_text_config(self, config_dict: dict) -> Qwen3OmniMoeTextConfig:
         # transformers' get_text_config method is used to get the text config from thinker_config.
