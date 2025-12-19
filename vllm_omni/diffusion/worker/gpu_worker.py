@@ -60,15 +60,16 @@ class GPUWorker:
         os.environ["WORLD_SIZE"] = str(world_size)
 
         device_type = detect_device_type()
-        if device_type == "xpu":
-            device = torch.device(f"xpu:{self.local_rank}")
-            torch.xpu.set_device(device)
-        elif device_type == "npu":
-            device = torch.device(f"npu:{self.local_rank}")
-            torch.npu.set_device(device)
+        if device_type == "cpu":
+            device = torch.device("cpu")
         else:
-            device = torch.device(f"cuda:{self.local_rank}")
-            torch.cuda.set_device(device)
+            device = torch.device(f"{device_type}:{rank}")
+
+        # Set the current device for accelerator backends.
+        if device_type == "cuda":
+            torch.cuda.set_device(rank)
+        elif device_type == "xpu":
+            torch.xpu.set_device(rank)
 
         # hack
         vllm_config = VllmConfig()
@@ -96,7 +97,7 @@ class GPUWorker:
                 with DeviceMemoryProfiler() as m:
                     self.pipeline = model_loader.load_model(
                         od_config=self.od_config,
-                        load_device=f"cuda:{rank}",
+                        load_device=str(device),
                     )
                 time_after_load = time.perf_counter()
 
