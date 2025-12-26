@@ -12,8 +12,6 @@ def detect_device_type() -> str:
         return device_type.lower()
     if torch.cuda.is_available():
         return "cuda"
-    if hasattr(torch, "xpu") and torch.xpu.is_available():
-        return "xpu"
     if hasattr(torch, "npu") and torch.npu.is_available():  # type: ignore[attr-defined]
         return "npu"
     return "cpu"
@@ -24,7 +22,11 @@ def is_npu() -> bool:
 
 
 def is_xpu() -> bool:
-    return detect_device_type() == "xpu"
+    return current_platform.is_xpu()
+
+
+def is_rocm() -> bool:
+    return current_platform.is_rocm()
 
 
 def get_device_control_env_var() -> str:
@@ -37,9 +39,19 @@ def get_device_control_env_var() -> str:
     device_type = detect_device_type()
     if device_type == "npu":
         return "ASCEND_RT_VISIBLE_DEVICES"
-    if device_type == "xpu":
-        return "ZE_AFFINITY_MASK"
     return "CUDA_VISIBLE_DEVICES"  # fallback
+
+
+def synchronize_if_needed(use_sync: bool) -> None:
+    if not use_sync:
+        return
+    device_type = detect_device_type()
+    if device_type == "cuda":
+        torch.cuda.synchronize()
+    elif device_type == "xpu":
+        torch.xpu.synchronize()
+    elif device_type == "npu":
+        torch.npu.synchronize()
 
 
 def get_diffusion_worker_class() -> type:
