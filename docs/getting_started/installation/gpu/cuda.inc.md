@@ -17,6 +17,8 @@ Therefore, it is recommended to install vLLM and vLLM-Omni with a **fresh new** 
 # --8<-- [start:pre-built-wheels]
 
 #### Installation of vLLM
+Note: Pre-built wheels are currently only available for vLLM-Omni 0.11.0rc1. For the latest version, please [build from source](https://docs.vllm.ai/projects/vllm-omni/en/latest/getting_started/installation/gpu/#build-wheel-from-source).
+
 
 vLLM-Omni is built based on vLLM. Please install it with command below.
 ```bash
@@ -40,8 +42,10 @@ If you do not need to modify source code of vLLM, you can directly install the s
 uv pip install vllm==0.12.0 --torch-backend=auto
 ```
 
+The release 0.12.0 of vLLM is based on PyTorch 2.9.0 which requires CUDA 12.9 environment.
+
 #### Installation of vLLM-Omni
-Install additional requirements for vLLM-Omni
+Since vllm-omni is rapidly evolving, it's recommended to install it from source
 ```bash
 git clone https://github.com/vllm-project/vllm-omni.git
 cd vllm-omni
