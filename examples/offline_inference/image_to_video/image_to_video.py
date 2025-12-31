@@ -130,10 +130,9 @@ def main():
         # Check if it's an OmniRequestOutput
         if hasattr(first_item, "final_output_type"):
             if first_item.final_output_type != "image":
-                print(
-                    f"Error: Unexpected output type '{first_item.final_output_type}', expected 'image' for video generation."
+                raise ValueError(
+                    f"Unexpected output type '{first_item.final_output_type}', expected 'image' for video generation."
                 )
-                return
 
             # Pipeline mode: extract from nested request_output
             if hasattr(first_item, "is_pipeline_output") and first_item.is_pipeline_output:
@@ -142,14 +141,12 @@ def main():
                     if isinstance(inner_output, dict) and "images" in inner_output:
                         frames = inner_output["images"][0] if inner_output["images"] else None
                         if frames is None:
-                            print("Error: No video frames found in output.")
-                            return
+                            raise ValueError("No video frames found in output.")
             # Diffusion mode: use direct images field
             elif hasattr(first_item, "images") and first_item.images:
                 frames = first_item.images
             else:
-                print("Error: No video frames found in OmniRequestOutput.")
-                return
+                raise ValueError("No video frames found in OmniRequestOutput.")
 
     # frames may be np.ndarray (preferred) or torch.Tensor
     # export_to_video expects a list of frames with values in [0, 1]
