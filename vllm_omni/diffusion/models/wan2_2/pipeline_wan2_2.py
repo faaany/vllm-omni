@@ -264,9 +264,9 @@ class Wan22Pipeline(nn.Module):
 
         # Store the active transformer config
         if load_transformer:
-            self.transformer_config = transformer_config
+            self.transformer_config = self.transformer.config
         elif load_transformer_2:
-            self.transformer_config = transformer_2_config
+            self.transformer_config = self.transformer_2.config
         else:
             raise RuntimeError("No transformer loaded")
 
