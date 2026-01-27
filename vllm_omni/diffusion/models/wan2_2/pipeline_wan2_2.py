@@ -262,6 +262,14 @@ class Wan22Pipeline(nn.Module):
         else:
             self.transformer_2 = None
 
+        # Store the active transformer config
+        if load_transformer:
+            self.transformer_config = transformer_config
+        elif load_transformer_2:
+            self.transformer_config = transformer_2_config
+        else:
+            raise RuntimeError("No transformer loaded")
+
         # Initialize UniPC scheduler
         flow_shift = od_config.flow_shift if od_config.flow_shift is not None else 5.0  # default for 720p
         self.scheduler = FlowUniPCMultistepScheduler(
@@ -323,9 +331,7 @@ class Wan22Pipeline(nn.Module):
 
         # Ensure dimensions are compatible with VAE and patch size
         # For expand_timesteps mode, we need latent dims to be even (divisible by patch_size)
-        # Get patch_size from whichever transformer is loaded
-        transformer_config = self.transformer.config if self.transformer is not None else self.transformer_2.config
-        patch_size = transformer_config.patch_size
+        patch_size = self.transformer_config.patch_size
         mod_value = self.vae_scale_factor_spatial * patch_size[1]  # 16*2=32 for TI2V, 8*2=16 for I2V
         height = (height // mod_value) * mod_value
         width = (width // mod_value) * mod_value
@@ -428,9 +434,7 @@ class Wan22Pipeline(nn.Module):
                 image_tensor = image
 
             # Use out_channels for noise latents (not in_channels which includes condition)
-            # Get config from whichever transformer is loaded
-            transformer_config = self.transformer.config if self.transformer is not None else self.transformer_2.config
-            num_channels_latents = transformer_config.out_channels
+            num_channels_latents = self.transformer_config.out_channels
             batch_size = prompt_embeds.shape[0]
 
             # Prepare noise latents
@@ -475,9 +479,7 @@ class Wan22Pipeline(nn.Module):
             first_frame_mask[:, :, 0] = 0
         else:
             # T2V mode: standard latent preparation
-            # Get config from whichever transformer is loaded
-            transformer_config = self.transformer.config if self.transformer is not None else self.transformer_2.config
-            num_channels_latents = transformer_config.in_channels
+            num_channels_latents = self.transformer_config.in_channels
             latents = self.prepare_latents(
                 batch_size=prompt_embeds.shape[0],
                 num_channels_latents=num_channels_latents,
@@ -527,11 +529,7 @@ class Wan22Pipeline(nn.Module):
                 latent_model_input = latent_model_input.to(dtype)
 
                 # Expand timesteps per patch - use floor division to match patch embedding
-                # Get patch_size from whichever transformer is loaded
-                transformer_config = (
-                    self.transformer.config if self.transformer is not None else self.transformer_2.config
-                )
-                patch_size = transformer_config.patch_size
+                patch_size = self.transformer_config.patch_size
                 num_latent_frames = latents.shape[2]
                 patch_height = latents.shape[3] // patch_size[1]
                 patch_width = latents.shape[4] // patch_size[2]
