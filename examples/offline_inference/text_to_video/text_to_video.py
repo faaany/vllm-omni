@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
         "--boundary_ratio",
         type=float,
         default=0.875,
-        help="Boundary split ratio for low/high DiT. Set to 0.0 to load only the high-noise transformer, or 1.0 to load only the low-noise transformer (saves memory).",
+        help="Boundary split ratio for low/high DiT. Default 0.875 uses both transformers for best quality. Set to 1.0 to load only the low-noise transformer (saves ~26GB memory with good quality, recommended if memory is limited).",
     )
     parser.add_argument(
         "--flow_shift", type=float, default=5.0, help="Scheduler flow_shift (5.0 for 720p, 12.0 for 480p)."
