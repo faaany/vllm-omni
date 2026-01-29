@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
-import torch
-
 from contextlib import contextmanager
 
+import torch
+
 from vllm_omni.worker.gpu_ar_model_runner import GPUARModelRunner
+
 
 @contextmanager
 def torch_cuda_wrapper_for_xpu():

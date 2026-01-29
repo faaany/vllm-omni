@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 
-import torch
-
 from contextlib import contextmanager
+
+import torch
 
 from vllm_omni.worker.gpu_generation_model_runner import GPUGenerationModelRunner
 

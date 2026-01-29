@@ -31,6 +31,9 @@ class OmniPlatform(Platform):
     def is_npu(self) -> bool:
         return self._omni_enum == OmniPlatformEnum.NPU
 
+    def is_xpu(self) -> bool:
+        return self._omni_enum == OmniPlatformEnum.XPU
+
     @classmethod
     def get_omni_ar_worker_cls(cls) -> str:
         raise NotImplementedError

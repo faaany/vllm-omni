@@ -6,6 +6,7 @@ from vllm.v1.worker.xpu_worker import XPUWorker
 from vllm_omni.platforms.xpu.worker.xpu_generation_model_runner import XPUGenerationModelRunner
 from vllm_omni.worker.mixins import OmniWorkerMixin
 
+
 class XPUGenerationWorker(OmniWorkerMixin, XPUWorker):
     """XPU diffusion worker for code2wav stage in Omni model."""
 
