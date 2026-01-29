@@ -29,4 +29,8 @@ Key arguments:
 - `--boundary_ratio`: Boundary split ratio for low/high DiT. Default `0.875` uses both transformers for best quality. Set to `1.0` to load only the low-noise transformer (saves ~26GB memory with good quality, recommended if memory is limited). Set to `0.0` loads only the high-noise transformer (not recommended, lower quality).
 - `--fps`: frames per second for the saved MP4 (requires `diffusers` export_to_video).
 - `--output`: path to save the generated video.
+- `--vae_use_slicing`: enable VAE slicing for memory optimization.
+- `--vae_use_tiling`: enable VAE tiling for memory optimization.
 - `--enable-cpu-offload`: enable CPU offloading for diffusion models.
+
+> ℹ️ If you encounter OOM errors, try using `--vae_use_slicing` and `--vae_use_tiling` to reduce memory usage.
