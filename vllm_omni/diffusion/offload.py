@@ -66,14 +66,7 @@ class SequentialOffloader:
 
         # Release allocator blocks when tensors leave the GPU.
         if previous_device.type != "cpu":
-            try:
-                current_omni_platform.empty_cache()
-            except (NotImplementedError, AttributeError):
-                logger.debug(
-                    "current_omni_platform.empty_cache is not available or not implemented; "
-                    "continuing without explicit GPU cache eviction.",
-                    exc_info=True,
-                )
+            current_omni_platform.empty_cache()
 
         if self.pin_memory:
             for p in module.parameters():
@@ -182,7 +175,6 @@ def apply_offload_hooks(
             try:
                 device = current_omni_platform.get_torch_device()
             except (NotImplementedError, AttributeError):
-                # Platform doesn't support device detection, default to CPU
                 device = torch.device("cpu")
 
     # Collect all encoders
@@ -202,11 +194,7 @@ def apply_offload_hooks(
     for dit_mod in dit_modules:
         dit_mod.to("cpu")
 
-    # Safe empty cache with graceful failure handling
-    try:
-        current_omni_platform.empty_cache()
-    except (NotImplementedError, AttributeError):
-        logger.debug("current_omni_platform.empty_cache() not supported; continuing without clearing cache")
+    current_omni_platform.empty_cache()
 
     if pin:
         for dit_mod in dit_modules:
