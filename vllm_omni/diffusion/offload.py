@@ -69,7 +69,11 @@ class SequentialOffloader:
             try:
                 current_omni_platform.empty_cache()
             except (NotImplementedError, AttributeError):
-                pass
+                logger.debug(
+                    "current_omni_platform.empty_cache is not available or not implemented; "
+                    "continuing without explicit GPU cache eviction.",
+                    exc_info=True,
+                )
 
         if self.pin_memory:
             for p in module.parameters():
@@ -206,7 +210,7 @@ def apply_offload_hooks(
     try:
         current_omni_platform.empty_cache()
     except (NotImplementedError, AttributeError):
-        pass
+        logger.debug("current_omni_platform.empty_cache() not supported; continuing without clearing cache")
 
     if pin and device.type in ("cuda", "rocm", "npu", "xpu"):
         for dit_mod in dit_modules:

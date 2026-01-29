@@ -8,7 +8,7 @@ from vllm_omni.worker.mixins import OmniWorkerMixin
 
 
 class XPUGenerationWorker(OmniWorkerMixin, XPUWorker):
-    """XPU diffusion worker for code2wav stage in Omni model."""
+    """XPU generation worker for the code2wav (non-AR waveform generation) stage in the Omni model."""
 
     def init_device(self):
         super().init_device()
