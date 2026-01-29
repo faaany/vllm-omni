@@ -65,8 +65,11 @@ class SequentialOffloader:
         module.to("cpu", non_blocking=True)
 
         # Release allocator blocks when tensors leave the GPU.
-        if hasattr(current_omni_platform, "empty_cache"):
-            current_omni_platform.empty_cache()
+        if previous_device.type != "cpu":
+            try:
+                current_omni_platform.empty_cache()
+            except (NotImplementedError, AttributeError):
+                pass
 
         if self.pin_memory:
             for p in module.parameters():
@@ -89,7 +92,11 @@ class SequentialOffloader:
         for enc in self.encoders:
             self._to_cpu(enc)
         self._to_gpu(module)
-        current_omni_platform.synchronize()
+        # Safe synchronization with graceful failure handling
+        try:
+            current_omni_platform.synchronize()
+        except (NotImplementedError, AttributeError):
+            pass
         logger.debug("Swapped: encoders -> CPU, DiT -> GPU")
 
     def _encoder_pre_hook(self, module: nn.Module, args: tuple) -> None:
@@ -97,7 +104,11 @@ class SequentialOffloader:
         for dit_mod in self.dits:
             self._to_cpu(dit_mod)
         self._to_gpu(module)
-        current_omni_platform.synchronize()
+        # Safe synchronization with graceful failure handling
+        try:
+            current_omni_platform.synchronize()
+        except (NotImplementedError, AttributeError):
+            pass
         logger.debug("Swapped: DiT -> CPU, encoder -> GPU")
 
     def register(self) -> None:
@@ -170,7 +181,8 @@ def apply_offload_hooks(
         except StopIteration:
             try:
                 device = current_omni_platform.get_torch_device()
-            except Exception:
+            except (NotImplementedError, AttributeError):
+                # Platform doesn't support device detection, default to CPU
                 device = torch.device("cpu")
 
     # Collect all encoders
@@ -190,8 +202,11 @@ def apply_offload_hooks(
     for dit_mod in dit_modules:
         dit_mod.to("cpu")
 
-    if hasattr(current_omni_platform, "empty_cache"):
+    # Safe empty cache with graceful failure handling
+    try:
         current_omni_platform.empty_cache()
+    except (NotImplementedError, AttributeError):
+        pass
 
     if pin and device.type in ("cuda", "rocm", "npu", "xpu"):
         for dit_mod in dit_modules:
