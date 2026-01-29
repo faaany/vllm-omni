@@ -3,8 +3,10 @@
 # Stage 1: Talker (text embeddings → 8-layer RVQ codec codes)
 # Stage 2: Code2Wav (8-layer RVQ codes → audio waveform)
 
+# The following config has been verified on 4x 1550-64G XPUs.
 stage_args:
   - stage_id: 0
+    stage_type: llm # Use llm stage type to launch OmniLLM
     runtime:
       devices: "0,1"
       max_batch_size: 1
@@ -35,6 +37,7 @@ stage_args:
       repetition_penalty: 1.05
 
   - stage_id: 1
+    stage_type: llm # Use llm stage type to launch OmniLLM
     runtime:
       devices: "2"
       max_batch_size: 1
@@ -47,7 +50,6 @@ stage_args:
       enforce_eager: true
       trust_remote_code: true
       engine_output_type: latent # Output codec codes for code2wav
-      # tensor_parallel_size: 2
       enable_prefix_caching: false
       max_num_batched_tokens: 32768
       distributed_executor_backend: "mp"
@@ -66,6 +68,7 @@ stage_args:
       stop_token_ids: [2150]
 
   - stage_id: 2
+    stage_type: llm # Use llm stage type to launch OmniLLM
     runtime:
       devices: "3"
       max_batch_size: 1
