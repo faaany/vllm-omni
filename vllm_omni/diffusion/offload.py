@@ -96,11 +96,9 @@ class SequentialOffloader:
         for enc in self.encoders:
             self._to_cpu(enc)
         self._to_gpu(module)
-        # Safe synchronization with graceful failure handling
-        try:
-            current_omni_platform.synchronize()
-        except (NotImplementedError, AttributeError):
-            pass
+
+        current_omni_platform.synchronize()
+
         logger.debug("Swapped: encoders -> CPU, DiT -> GPU")
 
     def _encoder_pre_hook(self, module: nn.Module, args: tuple) -> None:
@@ -108,11 +106,9 @@ class SequentialOffloader:
         for dit_mod in self.dits:
             self._to_cpu(dit_mod)
         self._to_gpu(module)
-        # Safe synchronization with graceful failure handling
-        try:
-            current_omni_platform.synchronize()
-        except (NotImplementedError, AttributeError):
-            pass
+
+        current_omni_platform.synchronize()
+
         logger.debug("Swapped: DiT -> CPU, encoder -> GPU")
 
     def register(self) -> None:
@@ -212,7 +208,7 @@ def apply_offload_hooks(
     except (NotImplementedError, AttributeError):
         logger.debug("current_omni_platform.empty_cache() not supported; continuing without clearing cache")
 
-    if pin and device.type in ("cuda", "rocm", "npu", "xpu"):
+    if pin:
         for dit_mod in dit_modules:
             for p in dit_mod.parameters():
                 if p.data.device.type == "cpu" and not p.data.is_pinned():
